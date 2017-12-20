@@ -67,8 +67,39 @@ class AccountBankStatementImport(models.TransientModel):
         paypal = data_file.strip().startswith('Date,')
         if not paypal:
             paypal = data_file.strip().startswith('"Date",')
-
         return paypal
+
+    def _prepare_paypal_line(self, line, i):
+        date_dt = datetime.strptime(
+            line[0], self._prepare_paypal_date_format())
+        rline = {
+            'date': fields.Date.to_string(date_dt),
+            'currency': line[6],
+            'owner_name': line[3],
+            'amount': line[7],
+            'commission': line[8],
+            'balance': line[27],
+            'transac_ref': line[23],
+            'ref': line[12],
+            'line_nr': i,
+        }
+        for field in ['commission', 'amount', 'balance']:
+            _logger.debug('Trying to convert %s to float' % rline[field])
+            try:
+                rline[field] = self._paypal_convert_amount(
+                    rline[field] or '0')
+            except:
+                raise Warning(
+                    _("Value '%s' for the field '%s' on line %d, "
+                        "cannot be converted to float")
+                    % (rline[field], field, i))
+        if rline['amount'] > 0:
+            rline['name'] = line[3] + ' ' + line[10]
+            rline['partner_email'] = line[10]
+        else:
+            rline['name'] = line[3] + ' ' + line[11]
+            rline['partner_email'] = line[11]
+        return rline
 
     @api.model
     def _parse_file(self, data_file):
@@ -88,7 +119,6 @@ class AccountBankStatementImport(models.TransientModel):
         company_currency_name = self.env.user.company_id.currency_id.name
         commission_total = 0.0
         raw_lines = []
-        paypal_email_account = False
         # To confirm : is the encoding always latin1 ?
         for line in unicodecsv.reader(
                 f, encoding=self._prepare_paypal_encoding()):
@@ -103,39 +133,7 @@ class AccountBankStatementImport(models.TransientModel):
                 _logger.info(
                     'Skipping line %d because it is not in Done state' % i)
                 continue
-            date_dt = datetime.strptime(
-                line[0], self._prepare_paypal_date_format())
-            rline = {
-                'date': fields.Date.to_string(date_dt),
-                'currency': line[6],
-                'owner_name': line[3],
-                'amount': line[7],
-                'commission': line[8],
-                'balance': line[27],
-                'transac_ref': line[23],
-                'ref': line[12],
-                'line_nr': i,
-            }
-            for field in ['commission', 'amount', 'balance']:
-                _logger.debug('Trying to convert %s to float' % rline[field])
-                try:
-                    rline[field] = self._paypal_convert_amount(rline[field])
-                except:
-                    raise Warning(
-                        _("Value '%s' for the field '%s' on line %d, "
-                            "cannot be converted to float")
-                        % (rline[field], field, i))
-            if rline['amount'] > 0:
-                rline['name'] = line[3] + ' ' + line[10]
-                rline['partner_email'] = line[10]
-                if not paypal_email_account:
-                    paypal_email_account = line[11]
-            else:
-                rline['name'] = line[3] + ' ' + line[11]
-                rline['partner_email'] = line[11]
-                if not paypal_email_account:
-                    paypal_email_account = line[10]
-            raw_lines.append(rline)
+            raw_lines.append(self._prepare_paypal_line(line, i))
 
         # Second pass to sort out the lines in other currencies
         final_lines = []

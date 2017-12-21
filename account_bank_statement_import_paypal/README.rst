@@ -26,6 +26,7 @@ Contributors
 ------------
 
 * Alexis de Lattre <alexis.delattre@akretion.com>
+* Sebastien BEAU <sebastien.beau@akretion.com>
 
 Maintainer
 ----------

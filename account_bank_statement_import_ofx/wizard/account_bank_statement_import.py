@@ -66,7 +66,10 @@ class AccountBankStatementImport(models.TransientModel):
                 "The following problem occurred during import. "
                 "The file might not be valid.\n\n %s") % e.message)
 
-        balance = float(ofx.account.statement.balance)
+        if hasattr(ofx.account.statement, 'balance'):
+            balance = float(ofx.account.statement.balance)
+        else:
+            balance = total_amt
         vals_bank_statement = {
             'name': ofx.account.number,
             'transactions': transactions,

@@ -4,7 +4,6 @@ import requests
 import json
 from datetime import datetime
 import pytz
-import re
 
 from odoo import api, models, _
 from odoo.exceptions import UserError
@@ -63,7 +62,7 @@ class OnlineBankStatementProviderQonto(models.Model):
             return res
         raise UserError(_('%s \n\n %s') % (response.status_code, response.text))
 
-    def _qonto_obtain_transaction(self, slug, date_since, date_until):
+    def _qonto_obtain_transactions(self, slug, date_since, date_until):
         self.ensure_one()
         url = QONTO_ENDPOINT + '/transactions'
         params = {'slug': slug, 'iban': self.account_number}
@@ -79,18 +78,54 @@ class OnlineBankStatementProviderQonto(models.Model):
         total_pages = 1
         while current_page <= total_pages:
             params['current_page'] = current_page
-            data = self._qonto_get_transaction(url, params)
+            data = self._qonto_get_transactions(url, params)
             transactions.extend(data.get('transactions', []))
             total_pages = data['meta']['total_pages']
             current_page += 1
         return transactions
 
-    def _qonto_get_transaction(self, url, params):
+    def _qonto_get_transactions(self, url, params):
         response = requests.get(url, verify=False, params=params,
                                 headers=self._qonto_header())
         if response.status_code == 200:
             return json.loads(response.text)
         raise UserError(_('%s \n\n %s') % (response.status_code, response.text))
+
+    def _qonto_prepare_statement_line(
+            self, transaction, sequence, journal_currency, currencies_code2id):
+        date = datetime.strptime(transaction['settled_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        side = 1 if transaction['side'] == 'credit' else -1
+        name = transaction['label'] or '/'
+        if transaction['reference']:
+            name = '%s %s' % (name, transaction['reference'])
+        vals_line = {
+            'sequence': sequence,
+            'date': date,
+            'name': name,
+            'ref': transaction['reference'],
+            'unique_import_id': transaction['transaction_id'],
+            'amount': transaction['amount'] * side,
+        }
+
+        if not transaction['local_currency']:
+            raise UserError(_(
+                "Transaction ID %s has not local_currency. "
+                "This should never happen.") % transaction['transaction_id'])
+        if transaction['local_currency'] not in currencies_code2id:
+            raise UserError(_(
+                "Currency %s used in transaction ID %s doesn't exist "
+                "in Odoo.") % (
+                    transaction['local_currency'],
+                    transaction['transaction_id']))
+
+        line_currency_id = currencies_code2id[transaction['local_currency']]
+
+        if journal_currency.id != line_currency_id:
+            vals_line.update({
+                'currency_id': line_currency_id,
+                'amount_currency': transaction['local_amount'] * side,
+                })
+        return vals_line
 
     def _qonto_obtain_statement_data(self, date_since, date_until):
         self.ensure_one()
@@ -103,35 +138,18 @@ class OnlineBankStatementProviderQonto(models.Model):
                 _('Qonto : wrong configuration, unknow account %s')
                 % journal.bank_account_id.acc_number)
 
-        transactions = self._qonto_obtain_transaction(slug, date_since, date_until)
+        transactions = self._qonto_obtain_transactions(slug, date_since, date_until)
 
-        currency = journal.currency_id or journal.company_id.currency_id
+        journal_currency = journal.currency_id or journal.company_id.currency_id
 
+        all_currencies = self.env['res.currency'].search_read([], ['name'])
+        currencies_code2id = dict([(x['name'], x['id']) for x in all_currencies])
         new_transactions = []
         sequence = 0
         for transaction in transactions:
-            date = datetime.strptime(transaction['settled_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
-            side = 1 if transaction['side'] == 'credit' else -1
             sequence += 1
-            vals_line = {
-                'sequence': sequence,
-                'date': date,
-                'name': re.sub(' +', ' ', '%s %s' % (
-                    transaction['label'],
-                    transaction['reference'])) or '/',
-                'ref': transaction['reference'],
-                'unique_import_id': transaction['transaction_id'],
-                'amount': transaction['amount'] * side,
-            }
-
-            line_currency = self.env['res.currency'].search(
-                [('name', '=', transaction['local_currency'])], limit=1)
-
-            if currency != line_currency:
-                vals_line.update(
-                    {'currency_id': line_currency.id,
-                     'amount_currency': transaction['local_amount'] * side})
-
+            vals_line = self._qonto_prepare_statement_line(
+                transaction, sequence, journal_currency, currencies_code2id)
             new_transactions.append(vals_line)
 
         if new_transactions:

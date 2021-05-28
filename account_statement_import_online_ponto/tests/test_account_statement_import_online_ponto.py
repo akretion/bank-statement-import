@@ -7,7 +7,7 @@ from unittest import mock
 from odoo import fields
 from odoo.tests import common
 
-_module_ns = "odoo.addons.account_bank_statement_import_online_ponto"
+_module_ns = "odoo.addons.account_statement_import_online_ponto"
 _provider_class = (
     _module_ns
     + ".models.online_bank_statement_provider_ponto"

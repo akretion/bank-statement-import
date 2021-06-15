@@ -15,7 +15,7 @@
         <field name="doall" eval="False" />
         <field
             name="model_id"
-            ref="account_bank_statement_import_online.model_online_bank_statement_provider"
+            ref="account_statement_import_online.model_online_bank_statement_provider"
         />
         <field name="code">model._scheduled_pull()</field>
     </record>

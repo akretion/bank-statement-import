@@ -17,7 +17,7 @@
         "web_widget_dropdown_dynamic",
     ],
     "data": [
-        "data/account_bank_statement_import_online.xml",
+        "data/account_statement_import_online.xml",
         "security/ir.model.access.csv",
         "security/online_bank_statement_provider.xml",
         "views/account_journal.xml",

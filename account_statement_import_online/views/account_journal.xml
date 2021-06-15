@@ -10,7 +10,7 @@
         <field name="model">account.journal</field>
         <field name="inherit_id" ref="account.view_account_journal_form" />
         <field name="arch" type="xml">
-            <page name="bank_account">
+            <page name="bank_account" position="inside">
                 <group
                     name="online_bank_statements"
                     string="Online Bank Statements (OCA)"
@@ -49,56 +49,12 @@
             </page>
         </field>
     </record>
-    <record model="ir.ui.view" id="view_account_bank_journal_form">
-        <field name="name">account.journal.form</field>
-        <field name="model">account.journal</field>
-        <field name="inherit_id" ref="account.view_account_bank_journal_form" />
-        <field name="arch" type="xml">
-            <group name="bank_statement" position="after">
-                <group
-                    name="online_bank_statements"
-                    string="Online Bank Statements (OCA)"
-                    groups="account.group_account_user"
-                    attrs="{'invisible': [('bank_statements_source', '!=', 'online')]}"
-                >
-                    <label
-                        for="online_bank_statement_provider"
-                        string="Provider"
-                        attrs="{'required': [('bank_statements_source', '=', 'online')]}"
-                        class="oe_edit_only"
-                        groups="account.group_account_user"
-                    />
-                    <field
-                        name="online_bank_statement_provider"
-                        nolabel="1"
-                        attrs="{'required': [('bank_statements_source', '=', 'online')]}"
-                        class="oe_edit_only"
-                        groups="account.group_account_user"
-                        widget="dynamic_dropdown"
-                        values="values_online_bank_statement_provider"
-                    />
-                    <label
-                        for="online_bank_statement_provider_id"
-                        string="Provider"
-                        attrs="{'invisible': [('online_bank_statement_provider_id', '=', False)]}"
-                        class="oe_read_only"
-                    />
-                    <field
-                        name="online_bank_statement_provider_id"
-                        nolabel="1"
-                        attrs="{'invisible': [('online_bank_statement_provider_id', '=', False)]}"
-                        class="oe_read_only"
-                    />
-                </group>
-            </group>
-        </field>
-    </record>
     <record id="journal_dashboard_view_inherit" model="ir.ui.view">
         <field name="name">account.journal.dashboard.kanban</field>
         <field name="model">account.journal</field>
         <field
             name="inherit_id"
-            ref="account_bank_statement_import.journal_dashboard_view_inherit"
+            ref="account_statement_import.journal_dashboard_view_inherit"
         />
         <field name="arch" type="xml">
             <div name="bank_statement_create_button" position="attributes">

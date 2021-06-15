@@ -49,31 +49,6 @@
             </page>
         </field>
     </record>
-    <record id="journal_dashboard_view_inherit" model="ir.ui.view">
-        <field name="name">account.journal.dashboard.kanban</field>
-        <field name="model">account.journal</field>
-        <field
-            name="inherit_id"
-            ref="account_statement_import.journal_dashboard_view_inherit"
-        />
-        <field name="arch" type="xml">
-            <div name="bank_statement_create_button" position="attributes">
-                <attribute
-                    name="t-if"
-                >dashboard.bank_statements_source != 'online_sync' and dashboard.bank_statements_source != 'online'</attribute>
-            </div>
-            <xpath expr="//a[@name='create_bank_statement']" position="attributes">
-                <attribute
-                    name="t-if"
-                >dashboard.bank_statements_source != 'online_sync' and dashboard.bank_statements_source != 'online'</attribute>
-            </xpath>
-            <xpath expr="//a[@name='import_statement']" position="attributes">
-                <attribute
-                    name="t-if"
-                >dashboard.bank_statements_source != 'online_sync' and dashboard.bank_statements_source != 'online'</attribute>
-            </xpath>
-        </field>
-    </record>
     <record id="action_online_bank_statements_pull_wizard" model="ir.actions.server">
         <field name="name">Online Bank Statements Pull Wizard</field>
         <field name="type">ir.actions.server</field>

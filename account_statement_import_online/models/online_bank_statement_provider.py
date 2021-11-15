@@ -96,6 +96,18 @@ class OnlineBankStatementProvider(models.Model):
     certificate_chain = fields.Text()
     allow_empty_statements = fields.Boolean(string="Allow empty statements")
 
+    provider_date = fields.Selection(
+        string="Provider date",
+        selection=[
+                ('date_create', 'Create Date'),
+                ('date_execution', 'Execution Date'),
+                ('date_internal', 'Internal Ref. Date'),
+                ('date_value', 'Value Date'),
+                ('date_update', 'Update Date'),
+        ],
+        default="date_execution",
+    )
+
     _sql_constraints = [
         (
             "journal_id_uniq",

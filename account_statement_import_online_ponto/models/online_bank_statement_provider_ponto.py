@@ -6,6 +6,7 @@ import json
 import re
 import time
 from datetime import datetime
+import logging
 
 import pytz
 import requests
@@ -17,6 +18,8 @@ from odoo.exceptions import UserError
 from odoo.addons.base.models.res_bank import sanitize_account_number
 
 PONTO_ENDPOINT = "https://api.myponto.com"
+
+_logger = logging.getLogger(__name__)
 
 
 class OnlineBankStatementProviderPonto(models.Model):
@@ -173,9 +176,10 @@ class OnlineBankStatementProviderPonto(models.Model):
             if transactions:
                 current_transactions = []
                 for transaction in transactions:
-                    date = self._ponto_date_from_string(
-                        transaction.get("attributes", {}).get("executionDate")
+                    dates = self._ponto_date_from_attributes(
+                        transaction.get("attributes", {})
                     )
+                    date = dates.get(self.provider_date) or dates.get("date_execution")
                     if date_since <= date < date_until:
                         current_transactions.append(transaction)
                 if current_transactions:
@@ -186,13 +190,36 @@ class OnlineBankStatementProviderPonto(models.Model):
             self.ponto_last_identifier = latest_identifier
         return transaction_lines
 
-    def _ponto_date_from_string(self, date_str):
+    def _ponto_date_from_string(self, date_str, format="%Y-%m-%dT%H:%M:%S.%fZ"):
         """Dates in Ponto are expressed in UTC, so we need to convert them
         to supplied tz for proper classification.
         """
-        dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+        dt = datetime.strptime(date_str, format)
         dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(self.tz or "utc"))
         return dt.replace(tzinfo=None)
+
+    def _ponto_date_from_attributes(self, attributes):
+        """Extract all the ponto's dates available in attributes"""
+        dates = {}
+        dates_str = {
+            "date_create": attributes.get("createdAt"),
+            "date_execution": attributes.get("executionDate"),
+            "date_value": attributes.get("valueDate"),
+            "date_update": attributes.get("updatedAt"),
+        }
+        for field, date_str in dates_str.items():
+            if date_str:
+                dates[field] = self._ponto_date_from_string(date_str)
+        # Internal Reference can also be a date sometimes (for Société Générale)
+        try:
+            int_str = attributes.get("internalReference")[:-7]
+            dates["date_internal"] = self._ponto_date_from_string(
+                int_str, "%Y-%m-%dT%H:%M"
+            )
+        except Exception:
+            pass
+
+        return dates
 
     def _ponto_obtain_statement_data(self, date_since, date_until):
         """Translate information from Ponto to Odoo bank statement lines."""
@@ -229,7 +256,8 @@ class OnlineBankStatementProviderPonto(models.Model):
             if attributes.get(x)
         ]
         ref = " ".join(ref_list)
-        date = self._ponto_date_from_string(attributes.get("executionDate"))
+        dates = self._ponto_date_from_attributes(attributes)
+        date = dates.get(self.provider_date) or dates.get("date_execution")
         vals_line = {
             "sequence": sequence,
             "date": date,
@@ -239,6 +267,7 @@ class OnlineBankStatementProviderPonto(models.Model):
             "amount": attributes["amount"],
             "raw_data": transaction,
         }
+        vals_line.update(dates)
         if attributes.get("counterpartReference"):
             vals_line["account_number"] = attributes["counterpartReference"]
         if attributes.get("counterpartName"):

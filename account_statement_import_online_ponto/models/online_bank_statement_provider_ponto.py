@@ -169,8 +169,8 @@ class OnlineBankStatementProviderPonto(models.Model):
                 if transactions:
                     current_transactions = []
                     for transaction in transactions:
-                        date = self._ponto_date_from_string(
-                            transaction.get("attributes", {}).get("executionDate")
+                        date = self._ponto_date_from_attributes(
+                            transaction.get("attributes", {})
                         )
                         if date_since <= date < date_until:
                             current_transactions.append(transaction)
@@ -188,13 +188,24 @@ class OnlineBankStatementProviderPonto(models.Model):
             self.ponto_last_identifier = latest_identifier
         return transaction_lines
 
-    def _ponto_date_from_string(self, date_str):
+    def _ponto_date_from_string(self, date_str, format="%Y-%m-%dT%H:%M:%S.%fZ"):
         """Dates in Ponto are expressed in UTC, so we need to convert them
         to supplied tz for proper classification.
         """
-        dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+        dt = datetime.strptime(date_str, format)
         dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(self.tz or "utc"))
         return dt.replace(tzinfo=None)
+
+    def _ponto_date_from_attributes(self, attributes):
+        """Try to extract transaction date from internalReference.
+        If not working, use executionDate"""
+        try:
+            date_str = attributes.get("internalReference")[:-7]
+            date = self._ponto_date_from_string(date_str, "%Y-%m-%dT%H:%M")
+        except Exception:
+            date = self._ponto_date_from_string(attributes.get("executionDate"))
+
+        return date
 
     def _ponto_obtain_statement_data(self, date_since, date_until):
         self.ensure_one()
@@ -222,7 +233,7 @@ class OnlineBankStatementProviderPonto(models.Model):
                 if attributes.get(x)
             ]
             ref = " ".join(ref_list)
-            date = self._ponto_date_from_string(attributes.get("executionDate"))
+            date = self._ponto_date_from_attributes(attributes)
             vals_line = {
                 "sequence": sequence,
                 "date": date,

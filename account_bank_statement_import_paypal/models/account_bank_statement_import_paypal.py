@@ -22,10 +22,10 @@ except (ImportError, IOError) as err:
 
 HEADERS = [
     # French
-    '"Date","Heure","Fuseau horaire","Description","Devise","Avant commission"'
-    ',"Commission","Net","Solde","Numéro de transaction","Adresse email de '
+    '"Date","Heure","Fuseau horaire","Description","Devise","Brut ",'
+    '"Frais ","Net","Solde","Numéro de transaction","Adresse email de '
     'l\'expéditeur","Nom","Nom de la banque","Compte bancaire","Montant des '
-    'frais de livraison et de traitement","TVA","Identifiant de facture",'
+    'frais de livraison et de traitement","TVA","Numéro de facture",'
     '"Numéro de la transaction de référence"',
     # English
     '"Date","Time","Time Zone","Description","Currency","Gross ","Fee ","Net",'

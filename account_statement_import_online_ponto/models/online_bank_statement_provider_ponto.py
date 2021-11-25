@@ -6,6 +6,7 @@ import json
 import re
 import time
 from datetime import datetime
+import logging
 
 import pytz
 import requests
@@ -17,6 +18,8 @@ from odoo.exceptions import UserError
 from odoo.addons.base.models.res_bank import sanitize_account_number
 
 PONTO_ENDPOINT = "https://api.myponto.com"
+
+_logger = logging.getLogger(__name__)
 
 
 class OnlineBankStatementProviderPonto(models.Model):
@@ -169,9 +172,8 @@ class OnlineBankStatementProviderPonto(models.Model):
                 if transactions:
                     current_transactions = []
                     for transaction in transactions:
-                        date = self._ponto_date_from_attributes(
-                            transaction.get("attributes", {})
-                        )
+                        dates = self._ponto_date_from_attributes(transaction.get("attributes", {}))
+                        date = dates.get(self.provider_date, "date_execution")
                         if date_since <= date < date_until:
                             current_transactions.append(transaction)
 
@@ -197,15 +199,25 @@ class OnlineBankStatementProviderPonto(models.Model):
         return dt.replace(tzinfo=None)
 
     def _ponto_date_from_attributes(self, attributes):
-        """Try to extract transaction date from internalReference.
-        If not working, use executionDate"""
+        """Extract all the ponto's dates available in attributes"""
+        dates = {}
+        dates_str = {
+            "date_create": attributes.get("createdAt"),
+            "date_execution": attributes.get("executionDate"),
+            "date_value": attributes.get("valueDate"),
+            "date_update": attributes.get("updatedAt"),
+        }
+        for field, date_str in dates_str.items():
+            if date_str:
+                dates[field] = self._ponto_date_from_string(date_str)
+        # Internal Reference can also be a date sometimes (for Société Générale)
         try:
-            date_str = attributes.get("internalReference")[:-7]
-            date = self._ponto_date_from_string(date_str, "%Y-%m-%dT%H:%M")
+            int_str = attributes.get("internalReference")[:-7]
+            dates["date_internal"] = self._ponto_date_from_string(int_str, "%Y-%m-%dT%H:%M")
         except Exception:
-            date = self._ponto_date_from_string(attributes.get("executionDate"))
+            pass
 
-        return date
+        return dates
 
     def _ponto_obtain_statement_data(self, date_since, date_until):
         self.ensure_one()
@@ -233,7 +245,8 @@ class OnlineBankStatementProviderPonto(models.Model):
                 if attributes.get(x)
             ]
             ref = " ".join(ref_list)
-            date = self._ponto_date_from_attributes(attributes)
+            dates = self._ponto_date_from_attributes(attributes)
+            date = dates.get(self.provider_date, "date_execution")
             vals_line = {
                 "sequence": sequence,
                 "date": date,
@@ -242,6 +255,7 @@ class OnlineBankStatementProviderPonto(models.Model):
                 "unique_import_id": transaction["id"],
                 "amount": attributes["amount"],
             }
+            vals_line.update(dates)
             if attributes.get("counterpartReference"):
                 vals_line["account_number"] = attributes["counterpartReference"]
             if attributes.get("counterpartName"):

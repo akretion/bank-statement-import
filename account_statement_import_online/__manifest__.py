@@ -24,6 +24,7 @@
         "views/actions.xml",
         "views/account_journal.xml",
         "views/online_bank_statement_provider.xml",
+        "views/account_bank_statement_views.xml",
     ],
     "installable": True,
 }

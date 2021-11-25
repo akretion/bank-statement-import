@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inherit Form view -->
+    <record id="view_bank_statement_form" model="ir.ui.view">
+      <field name="name">account.bank.statement.form</field>
+      <field name="model">account.bank.statement</field>
+      <field name="inherit_id" ref="account.view_bank_statement_form"/>
+      <field name="arch" type="xml">
+          <xpath expr="//field[@name='line_ids']//field[@name='date']" position="after">
+              <field name="date_create" optional="hide"/>
+              <field name="date_execution" optional="hide"/>
+              <field name="date_internal" optional="hide"/>
+              <field name="date_value" optional="hide"/>
+              <field name="date_update" optional="hide"/>
+          </xpath>
+      </field>
+    </record>
+
+</odoo>

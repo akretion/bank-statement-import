@@ -173,7 +173,7 @@ class OnlineBankStatementProviderPonto(models.Model):
                     current_transactions = []
                     for transaction in transactions:
                         dates = self._ponto_date_from_attributes(transaction.get("attributes", {}))
-                        date = dates.get(self.provider_date, "date_execution")
+                        date = dates.get(self.provider_date) or dates.get("date_execution")
                         if date_since <= date < date_until:
                             current_transactions.append(transaction)
 
@@ -246,7 +246,7 @@ class OnlineBankStatementProviderPonto(models.Model):
             ]
             ref = " ".join(ref_list)
             dates = self._ponto_date_from_attributes(attributes)
-            date = dates.get(self.provider_date, "date_execution")
+            date = dates.get(self.provider_date) or dates.get("date_execution")
             vals_line = {
                 "sequence": sequence,
                 "date": date,

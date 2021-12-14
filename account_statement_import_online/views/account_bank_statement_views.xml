@@ -17,4 +17,19 @@
       </field>
     </record>
 
+    <record id="view_bank_statement_line_tree" model="ir.ui.view">
+      <field name="name">account.bank.statement.line.tree (in account_statement_import_online)</field>
+      <field name="model">account.bank.statement.line</field>
+      <field name="inherit_id" ref="account.view_bank_statement_line_tree"/>
+      <field name="arch" type="xml">
+          <xpath expr="//field[@name='date']" position="after">
+              <field name="date_create" optional="hide"/>
+              <field name="date_execution" optional="hide"/>
+              <field name="date_internal" optional="hide"/>
+              <field name="date_value" optional="hide"/>
+              <field name="date_update" optional="hide"/>
+          </xpath>
+      </field>
+    </record>
+
 </odoo>

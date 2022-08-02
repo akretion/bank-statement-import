@@ -212,7 +212,7 @@ class OnlineBankStatementProviderPonto(models.Model):
                 dates[field] = self._ponto_date_from_string(date_str)
         # Internal Reference can also be a date sometimes (for Société Générale)
         try:
-            int_str = attributes.get("internalReference")[:-7]
+            int_str = attributes.get("internalReference")[:16]
             dates["date_internal"] = self._ponto_date_from_string(
                 int_str, "%Y-%m-%dT%H:%M"
             )

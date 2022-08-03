@@ -261,7 +261,7 @@ class OnlineBankStatementProviderPonto(models.Model):
         vals_line = {
             "sequence": sequence,
             "date": date,
-            "ref": re.sub(" +", " ", ref) or "/",
+            "ref": re.sub(" +", " ", ref) or False,
             "payment_ref": attributes.get("remittanceInformation", ref),
             "unique_import_id": transaction["id"],
             "amount": attributes["amount"],

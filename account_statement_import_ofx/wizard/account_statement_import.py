@@ -48,7 +48,19 @@ class AccountStatementImport(models.TransientModel):
         }
         return vals
 
+    def _fiducial_hack(self, data_file):
+        data_file_str = data_file.decode('utf-8')
+        if '<LEDGERBAL>' not in data_file_str:
+            data_file_str = data_file_str.replace('<AVAILBAL>', '<LEDGERBAL>')
+            data_file_str = data_file_str.replace('</AVAILBAL>', '</LEDGERBAL>')
+        data_file_str = data_file_str.replace(
+            'OFXHEADER=200\nVERSION=220\nsecurity=NONE\nOLDFILEUID=NONE\nNEWFILEUID=NONE',
+            '<?xml version="1.0" encoding="UTF-8"?>\n<?OFX OFXHEADER="200" VERSION="220" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>')
+        return data_file_str.encode('utf-8')
+
     def _parse_file(self, data_file):
+        if b'<BANKID>11449</BANKID>' in data_file:
+            data_file = self._fiducial_hack(data_file)
         ofx = self._check_ofx(data_file)
         if not ofx:
             return super()._parse_file(data_file)

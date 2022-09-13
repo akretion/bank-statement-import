@@ -23,6 +23,7 @@ class AccountStatementImport(models.TransientModel):
         try:
             ofx = OfxParser.parse(io.BytesIO(data_file))
         except Exception as e:
+            print('eeeeeeeeeeeeeeeeeeeeeeeeee=', e)
             _logger.debug(e)
             return False
         return ofx
@@ -49,14 +50,16 @@ class AccountStatementImport(models.TransientModel):
         return vals
 
     def _fiducial_hack(self, data_file):
+        _logger.info('Apply Fiducial OFX dirty hack')
         data_file_str = data_file.decode('utf-8')
         if '<LEDGERBAL>' not in data_file_str:
             data_file_str = data_file_str.replace('<AVAILBAL>', '<LEDGERBAL>')
             data_file_str = data_file_str.replace('</AVAILBAL>', '</LEDGERBAL>')
         data_file_str = data_file_str.replace(
             'OFXHEADER=200\nVERSION=220\nsecurity=NONE\nOLDFILEUID=NONE\nNEWFILEUID=NONE',
-            '<?xml version="1.0" encoding="UTF-8"?>\n<?OFX OFXHEADER="200" VERSION="220" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>')
-        return data_file_str.encode('utf-8')
+            'OFXHEADER:200\nVERSION:220\nsecurity:NONE\nOLDFILEUID:NONE\nNEWFILEUID:NONE\nENCODING:UTF-8')
+        res = data_file_str.encode('utf-8')
+        return res
 
     def _parse_file(self, data_file):
         if b'<BANKID>11449</BANKID>' in data_file:

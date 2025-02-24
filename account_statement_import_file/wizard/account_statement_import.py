@@ -4,7 +4,7 @@
 import base64
 import logging
 
-from odoo import _, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError
 
 from odoo.addons.base.models.res_bank import sanitize_account_number
@@ -39,7 +39,6 @@ class AccountStatementImport(models.TransientModel):
                     "only contains already imported transactions."
                 )
             )
-        self.env["ir.attachment"].create(self._prepare_create_attachment(result))
         return result
 
     def import_file_button(self):
@@ -65,15 +64,10 @@ class AccountStatementImport(models.TransientModel):
             return action_with_notif
         return action
 
-    def _prepare_create_attachment(self, result):
-        # Attach to first bank statement
-        res_id = result["statement_ids"][0]
-        st = self.env["account.bank.statement"].browse(res_id)
+    def _prepare_create_attachment(self, journal):
         vals = {
             "name": self.statement_filename,
-            "res_id": res_id,
-            "company_id": st.company_id.id,
-            "res_model": "account.bank.statement",
+            "company_id": journal.company_id.id,
             "datas": self.statement_file,
         }
         return vals
@@ -290,6 +284,9 @@ class AccountStatementImport(models.TransientModel):
         speeddict = journal._statement_line_import_speeddict()
         for st_vals in stmts_vals:
             st_vals["journal_id"] = journal.id
+            attach_vals = self._prepare_create_attachment(journal)
+            if attach_vals:
+                st_vals["attachment_ids"] = [Command.create(attach_vals)]
             for lvals in st_vals["transactions"]:
                 lvals["journal_id"] = journal.id
                 journal._statement_line_import_update_unique_import_id(

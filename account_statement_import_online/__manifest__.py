@@ -15,6 +15,7 @@
     "depends": [
         "account_statement_import_base",
         "web_widget_dropdown_dynamic",
+        "queue_job",
     ],
     "data": [
         "data/account_statement_import_online.xml",

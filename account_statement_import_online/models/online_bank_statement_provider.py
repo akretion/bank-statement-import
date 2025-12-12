@@ -359,6 +359,17 @@ class OnlineBankStatementProvider(models.Model):
         elif self.interval_type == "weeks":
             return relativedelta(weeks=self.interval_number)
 
+    def _pull_with_job(self):
+        self.ensure_one()
+        self._adjust_schedule()
+        date_since = (
+            (self.last_successful_run)
+            if self.last_successful_run
+            else (self.next_run - self._get_next_run_period())
+        )
+        date_until = self.next_run
+        self._pull(date_since, date_until)
+
     @api.model
     def _scheduled_pull(self):
         _logger.info("Scheduled pull of online bank statements...")
@@ -372,15 +383,7 @@ class OnlineBankStatementProvider(models.Model):
                 % ", ".join(providers.mapped("journal_id.name"))
             )
             for provider in providers.with_context(scheduled=True):
-                provider._adjust_schedule()
-                date_since = (
-                    (provider.last_successful_run)
-                    if provider.last_successful_run
-                    else (provider.next_run - provider._get_next_run_period())
-                )
-                date_until = provider.next_run
-                provider._pull(date_since, date_until)
-
+                provider.with_delay()._pull_with_job()
         _logger.info("Scheduled pull of online bank statements complete.")
 
     def _adjust_schedule(self):

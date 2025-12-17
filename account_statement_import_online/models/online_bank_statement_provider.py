@@ -368,7 +368,7 @@ class OnlineBankStatementProvider(models.Model):
             else (self.next_run - self._get_next_run_period())
         )
         date_until = self.next_run
-        self._pull(date_since, date_until)
+        self.with_context(scheduled=True)._pull(date_since, date_until)
 
     @api.model
     def _scheduled_pull(self):
@@ -382,7 +382,7 @@ class OnlineBankStatementProvider(models.Model):
                 "Pulling online bank statements of: %s"
                 % ", ".join(providers.mapped("journal_id.name"))
             )
-            for provider in providers.with_context(scheduled=True):
+            for provider in providers:
                 provider.with_delay()._pull_with_job()
         _logger.info("Scheduled pull of online bank statements complete.")
 

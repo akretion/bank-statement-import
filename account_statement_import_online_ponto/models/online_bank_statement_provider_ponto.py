@@ -80,10 +80,12 @@ class OnlineBankStatementProvider(models.Model):
         if not lines:
             _logger.info(_("No lines were retrieved from Ponto"))
         else:
+            last_identifier = lines[0].get("id")
+            self._ponto_store_lines(lines)
             # For scheduled runs, store latest identifier.
             if is_scheduled:
-                self.ponto_last_identifier = lines[0].get("id")
-            self._ponto_store_lines(lines)
+                self.ponto_last_identifier = last_identifier
+                self._schedule_next_run()
 
     def _ponto_retrieve_data(self, date_since, date_until):
         """Fill buffer with data from Ponto.

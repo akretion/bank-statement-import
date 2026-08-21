@@ -35,7 +35,7 @@
                     <button name="populate" type="object" string="Add All Move Lines" />
                 </group>
                 <group name="move_lines" string="Selected Move Lines to Create Lines">
-                    <field name="move_line_ids" nolabel="1">
+                    <field name="move_line_ids" nolabel="1" colspan="2">
                         <tree>
                             <field name="date" />
                             <field name="move_id" required="0" />

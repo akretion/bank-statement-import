@@ -5,4 +5,8 @@
   * João Marques
   * Ernesto García
 
+* `Akretion <https://www.akretion.com>`_:
+
+  * Renato Lima <renato.lima@akretion.com>
+
 * Pedro Gonzalez <pegonzalezs@gmail.com>

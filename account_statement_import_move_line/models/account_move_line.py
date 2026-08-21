@@ -15,17 +15,19 @@ class AccountMoveLine(models.Model):
         elif self.credit > 0:
             amount = -self.credit
         vals = {
-            "name": self.name or "?",
             "amount": amount,
             "partner_id": self.partner_id.id,
             "statement_id": statement.id,
             "payment_ref": self.ref or self.name,
-            "date": self.date_maturity,
-            "currency_id": self.currency_id.id,
+            # Fall back on the accounting date: date_maturity is empty on
+            # journal items that don't come from an invoice, and the statement
+            # line date is required.
+            "date": self.date_maturity or self.date,
         }
         if statement.currency_id != self.currency_id:
             vals.update(
                 {
+                    "foreign_currency_id": self.currency_id.id,
                     "amount_currency": self.amount_currency,
                 }
             )

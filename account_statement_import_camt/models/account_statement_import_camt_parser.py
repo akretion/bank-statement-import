@@ -302,6 +302,17 @@ class AccountStatementImportCamtParser(models.AbstractModel):
             transaction["narration"],
             f"{_('Additional Entry Information')} (AddtlNtryInf)",
         )
+        # Some formats (like Wise.com) put the transaction description in a
+        # Ntry-level `AddtlNtryInf` node, outside any `TxDtls`. Use it as a
+        # fallback `payment_ref` if parse_transaction_details (which runs
+        # later on the TxDtls node) does not find a more precise one.
+        addtl_infos = node.xpath("./ns:AddtlNtryInf", namespaces={"ns": ns})
+        if addtl_infos and transaction.get("payment_ref") == "/":
+            addtl_info = "\n".join(
+                x.text.strip() for x in addtl_infos if x.text and x.text.strip()
+            )
+            if addtl_info:
+                transaction["payment_ref"] = addtl_info
         self.add_value_from_node(
             ns,
             node,

@@ -23,6 +23,7 @@ class TestAccountAccountStatementImportOnline(common.SavepointCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env = cls.env(context=dict(cls.env.context, queue_job__no_delay=True))
 
         # Load fake model
         cls.loader = FakeModelLoader(cls.env, cls.__module__)
